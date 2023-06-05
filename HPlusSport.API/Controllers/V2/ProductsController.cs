@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
-namespace HPlusSport.API.Controllers
+namespace HPlusSport.API.Controllers.V2
 {
-    [Route("api/[controller]")]
+    [ApiVersion("2.0")]
+    //[Route("api/[controller]")]
+    [Route("v{v:apiVersion}/products")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
@@ -16,16 +18,16 @@ namespace HPlusSport.API.Controllers
 
         public ProductsController(ShopContext contex)
         {
-            _contex= contex;
+            _contex = contex;
             _contex.Database.EnsureCreated();
         }
 
         [HttpGet]
         public async Task<ActionResult> GetProducts([FromQuery] QueryParameters queryParameters)
         {
-            IQueryable<Product> products = _contex.Products;
+            IQueryable<Product> products = _contex.Products.Where(p => p.IsAvailable ==true);
 
-            if ( queryParameters.MinPrice != 0)
+            if (queryParameters.MinPrice != 0)
             {
                 products = products.Where(
                     p => p.Price >= queryParameters.MinPrice
@@ -37,7 +39,7 @@ namespace HPlusSport.API.Controllers
                     p => p.Price <= queryParameters.MaxPrice
                     );
             }
-            if(!string.IsNullOrEmpty(queryParameters.Sku))
+            if (!string.IsNullOrEmpty(queryParameters.Sku))
             {
                 products = products.Where(
                     p => p.Sku == queryParameters.Sku
@@ -60,10 +62,10 @@ namespace HPlusSport.API.Controllers
 
             if (!string.IsNullOrEmpty(queryParameters.SortBy))
             {
-                if(typeof(Product).GetProperty(queryParameters.SortBy) != null)
+                if (typeof(Product).GetProperty(queryParameters.SortBy) != null)
                 {
                     products = products.OrderByCustom(queryParameters.SortBy, queryParameters.SortOrder);
-                }     
+                }
             }
 
             products = products
@@ -82,7 +84,7 @@ namespace HPlusSport.API.Controllers
         {
             var product = await _contex.Products.FindAsync(id);
 
-            if(product == null)
+            if (product == null)
             {
                 return NotFound();
             }
@@ -146,17 +148,17 @@ namespace HPlusSport.API.Controllers
 
         [HttpDelete]
         [Route("Delete")]
-        public async Task<ActionResult> DeleteMultiple([FromQuery]int[] ids)
+        public async Task<ActionResult> DeleteMultiple([FromQuery] int[] ids)
         {
             var products = new List<Product>();
-            foreach(var id in ids)
+            foreach (var id in ids)
             {
                 var product = await _contex.Products.FindAsync(id);
                 if (product == null) { return NotFound(); }
 
                 products.Add(product);
             }
-            
+
             _contex.Products.RemoveRange(products);
             await _contex.SaveChangesAsync();
 
